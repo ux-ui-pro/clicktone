@@ -1,0 +1,38 @@
+{
+  "name": "clicktone",
+  "version": "0.0.1",
+  "description": "A simple class to create elements that play audio when clicked.",
+  "author": "ux-ui.pro",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ux-ui-pro/clicktone.git"
+  },
+  "bugs": {
+    "url": "https://github.com/ux-ui-pro/clicktone/issues"
+  },
+  "main": "dist/index.js",
+  "module": "dist/index.module.js",
+  "targets": {
+    "main": {
+      "source": "src/index.js"
+    },
+    "module": {
+      "source": "src/index.js"
+    }
+  },
+  "scripts": {
+    "clean": "rm -rf dist .parcel-cache",
+    "build": "yarn clean && parcel build",
+    "lint:js": "eslint --ext .js",
+    "lintfix": "yarn lint:js --fix"
+  },
+  "devDependencies": {
+    "eslint": "^7.32.0 || ^8.56.0",
+    "eslint-config-airbnb-base": "^15.0.0",
+    "eslint-plugin-import": "^2.29.1",
+    "parcel": "^2.11.0",
+    "postcss-html": "^1.6.0"
+  },
+  "keywords": []
+}
