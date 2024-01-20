@@ -10,7 +10,7 @@
 </div>
 
 <p align="center">A simple class to create elements that play audio when clicked.</p>
-<p align="center"><a href="https://4j8rvr.csb.app/">Demo</a></p>
+<p align="center"><a href="https://5mq6lq.csb.app/">Demo</a></p>
 <br>
 
 &#10148; **Install**
