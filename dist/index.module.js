@@ -1,5 +1,7 @@
 class $cf838c15c8b009ba$var$ClickTone {
-    constructor(){
+    constructor({ el: el = "", sound: sound = "" } = {}){
+        this.el = el;
+        this.sound = sound;
         this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
         this.setupIOSAudioContextFix();
     }
@@ -23,10 +25,10 @@ class $cf838c15c8b009ba$var$ClickTone {
             source.start(0);
         }).catch();
     }
-    init(buttonId, audioFileUrl) {
-        const button = document.getElementById(buttonId);
-        button.addEventListener("click", ()=>{
-            this.playAudio(audioFileUrl);
+    init() {
+        const targetElement = typeof this.el === "string" ? document.querySelector(this.el) : this.el;
+        targetElement.addEventListener("click", ()=>{
+            this.playAudio(this.sound);
         });
     }
 }

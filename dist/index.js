@@ -11,7 +11,9 @@ $parcel$defineInteropFlag(module.exports);
 
 $parcel$export(module.exports, "default", () => $4fa36e821943b400$export$2e2bcd8739ae039);
 class $4fa36e821943b400$var$ClickTone {
-    constructor(){
+    constructor({ el: el = "", sound: sound = "" } = {}){
+        this.el = el;
+        this.sound = sound;
         this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
         this.setupIOSAudioContextFix();
     }
@@ -35,10 +37,10 @@ class $4fa36e821943b400$var$ClickTone {
             source.start(0);
         }).catch();
     }
-    init(buttonId, audioFileUrl) {
-        const button = document.getElementById(buttonId);
-        button.addEventListener("click", ()=>{
-            this.playAudio(audioFileUrl);
+    init() {
+        const targetElement = typeof this.el === "string" ? document.querySelector(this.el) : this.el;
+        targetElement.addEventListener("click", ()=>{
+            this.playAudio(this.sound);
         });
     }
 }

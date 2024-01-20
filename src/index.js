@@ -1,6 +1,10 @@
 class ClickTone {
-  constructor() {
-    this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+  constructor({ el = '', sound = '' } = {}) {
+    this.el = el;
+    this.sound = sound;
+
+    this.audioContext = new (window.AudioContext ||
+      window.webkitAudioContext)();
     this.setupIOSAudioContextFix();
   }
 
@@ -31,11 +35,12 @@ class ClickTone {
       .catch();
   }
 
-  init(buttonId, audioFileUrl) {
-    const button = document.getElementById(buttonId);
+  init() {
+    const targetElement =
+      typeof this.el === 'string' ? document.querySelector(this.el) : this.el;
 
-    button.addEventListener('click', () => {
-      this.playAudio(audioFileUrl);
+    targetElement.addEventListener('click', () => {
+      this.playAudio(this.sound);
     });
   }
 }
