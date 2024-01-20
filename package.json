@@ -1,7 +1,7 @@
 {
   "name": "clicktone",
-  "version": "0.0.2",
-  "description": "A simple class to create elements that play audio when clicked.",
+  "version": "1.0.0",
+  "description": "A simple class that provides a convenient abstraction for handling audio playback by web applications, with support for iOS devices.",
   "author": "ux-ui.pro",
   "license": "MIT",
   "repository": {
@@ -34,5 +34,15 @@
     "parcel": "^2.11.0",
     "postcss-html": "^1.6.0"
   },
-  "keywords": []
+  "keywords": [
+    "MP3",
+    "WAV",
+    "OGG",
+    "AAC",
+    "iOS",
+    "sound",
+    "audio",
+    "playback",
+    "mobile"
+  ]
 }
