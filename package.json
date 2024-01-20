@@ -1,6 +1,6 @@
 {
   "name": "clicktone",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "A simple class to create elements that play audio when clicked.",
   "author": "ux-ui.pro",
   "license": "MIT",
