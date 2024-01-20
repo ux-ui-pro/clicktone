@@ -9,7 +9,8 @@
 
 </div>
 
-<p align="center">A simple class to create elements that play audio when clicked.</p>
+<p align="center">A simple class that provides a convenient abstraction for handling<br>
+audio playback by web applications, with support for iOS devices.</p>
 <p align="center"><a href="https://n2q8x8.csb.app/">Demo</a></p>
 <br>
 
@@ -30,14 +31,11 @@ import ClickTone from 'clicktone';
 
 &#10148; **Usage**
 
-<sup>You can pass type, class, or ID selectors, as well as the DOM element itself, as parameters for 'el'.</sup>
+<sub>Class uses the Web Audio API, which supports many audio file formats: MP3, WAV, OGG, AAC and others. Please note that not all browsers support these formats.</sub>
 ```javascript
-const clickTone = new ClickTone({
-  el: '#button',
-  sound: 'sound.mp3',
-});
+const clickSound = new ClickTone('./sound.mp3');
 
-clickTone.init();
+myButton.addEventListener('click', () => clickSound.play());
 ```
 <br>
 
