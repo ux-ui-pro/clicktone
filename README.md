@@ -10,7 +10,7 @@
 </div>
 
 <p align="center">A simple class to create elements that play audio when clicked.</p>
-<p align="center"><a href="https://5mq6lq.csb.app/">Demo</a></p>
+<p align="center"><a href="https://n2q8x8.csb.app/">Demo</a></p>
 <br>
 
 &#10148; **Install**
@@ -30,10 +30,14 @@ import ClickTone from 'clicktone';
 
 &#10148; **Usage**
 
+<sup>You can pass type, class, or ID selectors, as well as the DOM element itself, as parameters for 'el'.</sup>
 ```javascript
-const clickTone = new ClickTone();
+const clickTone = new ClickTone({
+  el: '#button',
+  sound: 'sound.mp3',
+});
 
-clickTone.init('myButton', 'sound.mp3');
+clickTone.init();
 ```
 <br>
 
