@@ -3,8 +3,8 @@ class ClickTone {
     this.el = el;
     this.sound = sound;
 
-    this.audioContext = new (window.AudioContext ||
-      window.webkitAudioContext)();
+    this.audioContext = new (window.AudioContext
+      || window.webkitAudioContext)();
     this.setupIOSAudioContextFix();
   }
 
@@ -36,8 +36,7 @@ class ClickTone {
   }
 
   init() {
-    const targetElement =
-      typeof this.el === 'string' ? document.querySelector(this.el) : this.el;
+    const targetElement = typeof this.el === 'string' ? document.querySelector(this.el) : this.el;
 
     targetElement.addEventListener('click', () => {
       this.playAudio(this.sound);
