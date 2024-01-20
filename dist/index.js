@@ -11,13 +11,12 @@ $parcel$defineInteropFlag(module.exports);
 
 $parcel$export(module.exports, "default", () => $4fa36e821943b400$export$2e2bcd8739ae039);
 class $4fa36e821943b400$var$ClickTone {
-    constructor({ el: el = "", sound: sound = "" } = {}){
-        this.el = el;
-        this.sound = sound;
+    constructor(file){
+        this.file = file;
         this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
-        this.setupIOSAudioContextFix();
+        this.iOSFixAudioContext();
     }
-    setupIOSAudioContextFix() {
+    iOSFixAudioContext() {
         if (this.audioContext.state === "suspended" && "ontouchstart" in window) {
             const unlock = ()=>{
                 this.audioContext.resume().then(()=>{
@@ -29,19 +28,21 @@ class $4fa36e821943b400$var$ClickTone {
             document.body.addEventListener("touchend", unlock, false);
         }
     }
-    playAudio(url) {
-        fetch(url).then((response)=>response.arrayBuffer()).then((buffer)=>this.audioContext.decodeAudioData(buffer)).then((audioData)=>{
-            const source = this.audioContext.createBufferSource();
-            source.buffer = audioData;
-            source.connect(this.audioContext.destination);
-            source.start(0);
-        }).catch();
-    }
-    init() {
-        const targetElement = typeof this.el === "string" ? document.querySelector(this.el) : this.el;
-        targetElement.addEventListener("click", ()=>{
-            this.playAudio(this.sound);
+    audio(url) {
+        return new Promise((resolve, reject)=>{
+            fetch(url).then((response)=>response.arrayBuffer()).then((buffer)=>this.audioContext.decodeAudioData(buffer)).then((audioData)=>{
+                const source = this.audioContext.createBufferSource();
+                source.buffer = audioData;
+                source.connect(this.audioContext.destination);
+                source.start(0);
+                resolve();
+            }).catch((error)=>{
+                reject(error);
+            });
         });
+    }
+    play(url = this.file) {
+        return this.audio(url);
     }
 }
 var $4fa36e821943b400$export$2e2bcd8739ae039 = $4fa36e821943b400$var$ClickTone;

@@ -1,11 +1,10 @@
 class $cf838c15c8b009ba$var$ClickTone {
-    constructor({ el: el = "", sound: sound = "" } = {}){
-        this.el = el;
-        this.sound = sound;
+    constructor(file){
+        this.file = file;
         this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
-        this.setupIOSAudioContextFix();
+        this.iOSFixAudioContext();
     }
-    setupIOSAudioContextFix() {
+    iOSFixAudioContext() {
         if (this.audioContext.state === "suspended" && "ontouchstart" in window) {
             const unlock = ()=>{
                 this.audioContext.resume().then(()=>{
@@ -17,19 +16,21 @@ class $cf838c15c8b009ba$var$ClickTone {
             document.body.addEventListener("touchend", unlock, false);
         }
     }
-    playAudio(url) {
-        fetch(url).then((response)=>response.arrayBuffer()).then((buffer)=>this.audioContext.decodeAudioData(buffer)).then((audioData)=>{
-            const source = this.audioContext.createBufferSource();
-            source.buffer = audioData;
-            source.connect(this.audioContext.destination);
-            source.start(0);
-        }).catch();
-    }
-    init() {
-        const targetElement = typeof this.el === "string" ? document.querySelector(this.el) : this.el;
-        targetElement.addEventListener("click", ()=>{
-            this.playAudio(this.sound);
+    audio(url) {
+        return new Promise((resolve, reject)=>{
+            fetch(url).then((response)=>response.arrayBuffer()).then((buffer)=>this.audioContext.decodeAudioData(buffer)).then((audioData)=>{
+                const source = this.audioContext.createBufferSource();
+                source.buffer = audioData;
+                source.connect(this.audioContext.destination);
+                source.start(0);
+                resolve();
+            }).catch((error)=>{
+                reject(error);
+            });
         });
+    }
+    play(url = this.file) {
+        return this.audio(url);
     }
 }
 var $cf838c15c8b009ba$export$2e2bcd8739ae039 = $cf838c15c8b009ba$var$ClickTone;

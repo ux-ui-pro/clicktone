@@ -1,14 +1,11 @@
 class ClickTone {
-  constructor({ el = '', sound = '' } = {}) {
-    this.el = el;
-    this.sound = sound;
-
-    this.audioContext = new (window.AudioContext
-      || window.webkitAudioContext)();
-    this.setupIOSAudioContextFix();
+  constructor(file) {
+    this.file = file;
+    this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+    this.iOSFixAudioContext();
   }
 
-  setupIOSAudioContextFix() {
+  iOSFixAudioContext() {
     if (this.audioContext.state === 'suspended' && 'ontouchstart' in window) {
       const unlock = () => {
         this.audioContext.resume().then(() => {
@@ -22,25 +19,28 @@ class ClickTone {
     }
   }
 
-  playAudio(url) {
-    fetch(url)
-      .then((response) => response.arrayBuffer())
-      .then((buffer) => this.audioContext.decodeAudioData(buffer))
-      .then((audioData) => {
-        const source = this.audioContext.createBufferSource();
-        source.buffer = audioData;
-        source.connect(this.audioContext.destination);
-        source.start(0);
-      })
-      .catch();
+  audio(url) {
+    return new Promise((resolve, reject) => {
+      fetch(url)
+        .then((response) => response.arrayBuffer())
+        .then((buffer) => this.audioContext.decodeAudioData(buffer))
+        .then((audioData) => {
+          const source = this.audioContext.createBufferSource();
+
+          source.buffer = audioData;
+          source.connect(this.audioContext.destination);
+          source.start(0);
+
+          resolve();
+        })
+        .catch((error) => {
+          reject(error);
+        });
+    });
   }
 
-  init() {
-    const targetElement = typeof this.el === 'string' ? document.querySelector(this.el) : this.el;
-
-    targetElement.addEventListener('click', () => {
-      this.playAudio(this.sound);
-    });
+  play(url = this.file) {
+    return this.audio(url);
   }
 }
 
