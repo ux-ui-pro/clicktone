@@ -11,7 +11,7 @@
 
 <p align="center">A simple class that provides a convenient abstraction for handling<br>
 audio playback by web applications, with support for iOS devices.</p>
-<p align="center"><a href="https://n2q8x8.csb.app/">Demo</a></p>
+<p align="center"><a href="https://codepen.io/ux-ui/pen/yLwbmMr">Demo</a></p>
 <br>
 
 &#10148; **Install**
@@ -33,9 +33,12 @@ import ClickTone from 'clicktone';
 
 <sub>Class uses the Web Audio API, which supports many audio file formats: MP3, WAV, OGG, AAC and others. Please note that not all browsers support these formats.</sub>
 ```javascript
-const clickSound = new ClickTone('./sound.mp3');
+const click = new ClickTone({
+  file: './sound.mp3',
+  volume: 0.7,
+});
 
-myButton.addEventListener('click', () => clickSound.play());
+myButton.addEventListener('click', () => click.play());
 ```
 <br>
 
