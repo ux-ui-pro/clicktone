@@ -1,6 +1,7 @@
 class ClickTone {
-  constructor(file) {
-    this.file = file;
+  constructor(options) {
+    this.file = options.file;
+    this.volume = options.volume || 1.0;
     this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
     this.iOSFixAudioContext();
   }
@@ -26,9 +27,12 @@ class ClickTone {
         .then((buffer) => this.audioContext.decodeAudioData(buffer))
         .then((audioData) => {
           const source = this.audioContext.createBufferSource();
+          const gainNode = this.audioContext.createGain();
 
           source.buffer = audioData;
-          source.connect(this.audioContext.destination);
+          gainNode.gain.value = this.volume;
+          source.connect(gainNode);
+          gainNode.connect(this.audioContext.destination);
           source.start(0);
 
           resolve();
