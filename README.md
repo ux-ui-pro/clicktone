@@ -36,6 +36,9 @@ import ClickTone from 'clicktone';
 const click = new ClickTone({
   file: './sound.mp3',
   volume: 0.7,
+  throttle: 400,
+  callback: () => { console.log('Playback ended') },
+  debug: true,
 });
 
 myButton.addEventListener('click', () => click.play());
