@@ -9,18 +9,25 @@ function $parcel$export(e, n, v, s) {
 
 $parcel$defineInteropFlag(module.exports);
 
-$parcel$export(module.exports, "default", () => $4fa36e821943b400$export$2e2bcd8739ae039);
-class $4fa36e821943b400$var$ClickTone {
+$parcel$export(module.exports, "default", () => $5b968dfbc764795f$export$2e2bcd8739ae039);
+/**
+ * @typedef {Object} window
+ * @property {typeof AudioContext} webkitAudioContext
+ */ class $5b968dfbc764795f$var$ClickTone {
     constructor({ file: file, volume: volume = 1.0, callback: callback = null, throttle: throttle = 0, debug: debug = false }){
         this.file = file;
         this.volume = volume;
         this.callback = callback;
         this.throttle = throttle;
         this.debug = debug;
-        this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
-        this.iOSFixAudioContext();
         this.lastClickTime = 0;
         this.audioCache = {};
+    }
+    initAudioContext() {
+        if (!this.audioContext) {
+            this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            this.iOSFixAudioContext();
+        }
     }
     iOSFixAudioContext = ()=>{
         if (this.audioContext && this.audioContext.state === "suspended" && "ontouchstart" in window) {
@@ -48,6 +55,7 @@ class $4fa36e821943b400$var$ClickTone {
         }
     };
     audio = async (url)=>{
+        this.initAudioContext();
         try {
             const audioData = await this.fetchAndDecodeAudio(url);
             const source = this.audioContext.createBufferSource();
@@ -57,7 +65,7 @@ class $4fa36e821943b400$var$ClickTone {
             source.connect(gainNode);
             gainNode.connect(this.audioContext.destination);
             source.onended = ()=>{
-                if (this.callback) this.callback();
+                if (this.callback) this.callback?.();
             };
             source.start(0);
         } catch (error) {
@@ -65,27 +73,25 @@ class $4fa36e821943b400$var$ClickTone {
             throw new Error(`Something went wrong while playing audio: ${error.message}`);
         }
     };
-    throttleFn = (func)=>{
-        return ()=>{
+    throttleFn = (func)=>()=>{
             const now = Date.now();
             if (now - this.lastClickTime >= this.throttle) {
                 func();
                 this.lastClickTime = now;
             }
         };
-    };
     play = async (url = this.file)=>{
         const throttledPlay = this.throttleFn(()=>this.audio(url));
         try {
             await throttledPlay();
         } catch (error) {
             if (this.debug) console.error("Audio playback error: ", error);
-            if (this.callback) this.callback(error);
+            if (this.callback) this.callback?.(error);
             else throw error;
         }
     };
 }
-var $4fa36e821943b400$export$2e2bcd8739ae039 = $4fa36e821943b400$var$ClickTone;
+var $5b968dfbc764795f$export$2e2bcd8739ae039 = $5b968dfbc764795f$var$ClickTone;
 
 
 //# sourceMappingURL=index.js.map

@@ -1,3 +1,8 @@
+/**
+ * @typedef {Object} window
+ * @property {typeof AudioContext} webkitAudioContext
+ */
+
 class ClickTone {
   constructor({
     file,
@@ -11,10 +16,15 @@ class ClickTone {
     this.callback = callback;
     this.throttle = throttle;
     this.debug = debug;
-    this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
-    this.iOSFixAudioContext();
     this.lastClickTime = 0;
     this.audioCache = {};
+  }
+
+  initAudioContext() {
+    if (!this.audioContext) {
+      this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+      this.iOSFixAudioContext();
+    }
   }
 
   iOSFixAudioContext = () => {
@@ -44,16 +54,20 @@ class ClickTone {
       const audioData = await this.audioContext.decodeAudioData(buffer);
 
       this.audioCache[url] = audioData;
+
       return audioData;
     } catch (error) {
       if (this.debug) {
         console.error('Audio loading and decoding error: ', error);
       }
+
       throw new Error(`Something went wrong when loading and decoding the audio: ${error.message}`);
     }
   };
 
   audio = async (url) => {
+    this.initAudioContext();
+
     try {
       const audioData = await this.fetchAndDecodeAudio(url);
       const source = this.audioContext.createBufferSource();
@@ -66,7 +80,7 @@ class ClickTone {
 
       source.onended = () => {
         if (this.callback) {
-          this.callback();
+          this.callback?.();
         }
       };
 
@@ -75,20 +89,19 @@ class ClickTone {
       if (this.debug) {
         console.error('Audio playback error: ', error);
       }
+
       throw new Error(`Something went wrong while playing audio: ${error.message}`);
     }
   };
 
-  throttleFn = (func) => {
-    return () => {
-      const now = Date.now();
+  throttleFn = (func) => () => {
+    const now = Date.now();
 
-      if (now - this.lastClickTime >= this.throttle) {
-        func();
+    if (now - this.lastClickTime >= this.throttle) {
+      func();
 
-        this.lastClickTime = now;
-      }
-    };
+      this.lastClickTime = now;
+    }
   };
 
   play = async (url = this.file) => {
@@ -102,7 +115,7 @@ class ClickTone {
       }
 
       if (this.callback) {
-        this.callback(error);
+        this.callback?.(error);
       } else {
         throw error;
       }

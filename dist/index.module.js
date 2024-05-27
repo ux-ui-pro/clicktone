@@ -1,14 +1,21 @@
-class $cf838c15c8b009ba$var$ClickTone {
+/**
+ * @typedef {Object} window
+ * @property {typeof AudioContext} webkitAudioContext
+ */ class $a3b359dec00ad964$var$ClickTone {
     constructor({ file: file, volume: volume = 1.0, callback: callback = null, throttle: throttle = 0, debug: debug = false }){
         this.file = file;
         this.volume = volume;
         this.callback = callback;
         this.throttle = throttle;
         this.debug = debug;
-        this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
-        this.iOSFixAudioContext();
         this.lastClickTime = 0;
         this.audioCache = {};
+    }
+    initAudioContext() {
+        if (!this.audioContext) {
+            this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            this.iOSFixAudioContext();
+        }
     }
     iOSFixAudioContext = ()=>{
         if (this.audioContext && this.audioContext.state === "suspended" && "ontouchstart" in window) {
@@ -36,6 +43,7 @@ class $cf838c15c8b009ba$var$ClickTone {
         }
     };
     audio = async (url)=>{
+        this.initAudioContext();
         try {
             const audioData = await this.fetchAndDecodeAudio(url);
             const source = this.audioContext.createBufferSource();
@@ -45,7 +53,7 @@ class $cf838c15c8b009ba$var$ClickTone {
             source.connect(gainNode);
             gainNode.connect(this.audioContext.destination);
             source.onended = ()=>{
-                if (this.callback) this.callback();
+                if (this.callback) this.callback?.();
             };
             source.start(0);
         } catch (error) {
@@ -53,28 +61,26 @@ class $cf838c15c8b009ba$var$ClickTone {
             throw new Error(`Something went wrong while playing audio: ${error.message}`);
         }
     };
-    throttleFn = (func)=>{
-        return ()=>{
+    throttleFn = (func)=>()=>{
             const now = Date.now();
             if (now - this.lastClickTime >= this.throttle) {
                 func();
                 this.lastClickTime = now;
             }
         };
-    };
     play = async (url = this.file)=>{
         const throttledPlay = this.throttleFn(()=>this.audio(url));
         try {
             await throttledPlay();
         } catch (error) {
             if (this.debug) console.error("Audio playback error: ", error);
-            if (this.callback) this.callback(error);
+            if (this.callback) this.callback?.(error);
             else throw error;
         }
     };
 }
-var $cf838c15c8b009ba$export$2e2bcd8739ae039 = $cf838c15c8b009ba$var$ClickTone;
+var $a3b359dec00ad964$export$2e2bcd8739ae039 = $a3b359dec00ad964$var$ClickTone;
 
 
-export {$cf838c15c8b009ba$export$2e2bcd8739ae039 as default};
+export {$a3b359dec00ad964$export$2e2bcd8739ae039 as default};
 //# sourceMappingURL=index.module.js.map
