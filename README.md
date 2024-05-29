@@ -16,7 +16,7 @@
 
 &#10148; **Install**
 
-```
+```console
 yarn add clicktone
 ```
 
