@@ -1,6 +1,6 @@
 {
   "name": "clicktone",
-  "version": "1.3.0",
+  "version": "1.4.0",
   "description": "A simple class that provides a convenient abstraction for handling audio playback by web applications, with support for iOS devices.",
   "author": "ux-ui.pro",
   "license": "MIT",

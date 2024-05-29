@@ -9,8 +9,8 @@
 
 </div>
 
-<p align="center">A simple class that provides a convenient abstraction for handling<br>
-audio playback by web applications, with support for iOS devices.</p>
+<p align="center">A simple class that provides a convenient abstraction for handling audio playback by web applications, with support for iOS devices.</p>
+<p align="center"><sup>800B gzipped</sup></p>
 <p align="center"><a href="https://codepen.io/ux-ui/pen/yLwbmMr">Demo</a></p>
 <br>
 

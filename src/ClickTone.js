@@ -4,6 +4,22 @@
  */
 
 class ClickTone {
+  #file;
+
+  #volume;
+
+  #callback;
+
+  #throttle;
+
+  #debug;
+
+  #lastClickTime;
+
+  #audioCache;
+
+  #audioContext;
+
   constructor({
     file,
     volume = 1.0,
@@ -11,27 +27,27 @@ class ClickTone {
     throttle = 0,
     debug = false,
   }) {
-    this.file = file;
-    this.volume = volume;
-    this.callback = callback;
-    this.throttle = throttle;
-    this.debug = debug;
-    this.lastClickTime = 0;
-    this.audioCache = {};
+    this.#file = file;
+    this.#volume = volume;
+    this.#callback = callback;
+    this.#throttle = throttle;
+    this.#debug = debug;
+    this.#lastClickTime = 0;
+    this.#audioCache = {};
   }
 
-  initAudioContext() {
-    if (!this.audioContext) {
-      this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
-      this.iOSFixAudioContext();
+  #initAudioContext() {
+    if (!this.#audioContext) {
+      this.#audioContext = new (window.AudioContext || window.webkitAudioContext)();
+      this.#iOSFixAudioContext();
     }
   }
 
-  iOSFixAudioContext = () => {
-    if (this.audioContext && this.audioContext.state === 'suspended' && 'ontouchstart' in window) {
+  #iOSFixAudioContext = () => {
+    if (this.#audioContext && this.#audioContext.state === 'suspended' && 'ontouchstart' in window) {
       const unlock = () => {
-        if (this.audioContext.state === 'suspended') {
-          this.audioContext.resume().then(() => {
+        if (this.#audioContext.state === 'suspended') {
+          this.#audioContext.resume().then(() => {
             document.body.removeEventListener('touchstart', unlock);
             document.body.removeEventListener('touchend', unlock);
           });
@@ -43,21 +59,21 @@ class ClickTone {
     }
   };
 
-  fetchAndDecodeAudio = async (url) => {
+  #fetchAndDecodeAudio = async (url) => {
     try {
-      if (this.audioCache[url]) {
-        return this.audioCache[url];
+      if (this.#audioCache[url]) {
+        return this.#audioCache[url];
       }
 
       const response = await fetch(url);
       const buffer = await response.arrayBuffer();
-      const audioData = await this.audioContext.decodeAudioData(buffer);
+      const audioData = await this.#audioContext.decodeAudioData(buffer);
 
-      this.audioCache[url] = audioData;
+      this.#audioCache[url] = audioData;
 
       return audioData;
     } catch (error) {
-      if (this.debug) {
+      if (this.#debug) {
         console.error('Audio loading and decoding error: ', error);
       }
 
@@ -65,28 +81,28 @@ class ClickTone {
     }
   };
 
-  audio = async (url) => {
-    this.initAudioContext();
+  #audio = async (url) => {
+    this.#initAudioContext();
 
     try {
-      const audioData = await this.fetchAndDecodeAudio(url);
-      const source = this.audioContext.createBufferSource();
-      const gainNode = this.audioContext.createGain();
+      const audioData = await this.#fetchAndDecodeAudio(url);
+      const source = this.#audioContext.createBufferSource();
+      const gainNode = this.#audioContext.createGain();
 
       source.buffer = audioData;
-      gainNode.gain.value = this.volume;
+      gainNode.gain.value = this.#volume;
       source.connect(gainNode);
-      gainNode.connect(this.audioContext.destination);
+      gainNode.connect(this.#audioContext.destination);
 
       source.onended = () => {
-        if (this.callback) {
-          this.callback?.();
+        if (this.#callback) {
+          this.#callback?.();
         }
       };
 
       source.start(0);
     } catch (error) {
-      if (this.debug) {
+      if (this.#debug) {
         console.error('Audio playback error: ', error);
       }
 
@@ -94,28 +110,28 @@ class ClickTone {
     }
   };
 
-  throttleFn = (func) => () => {
+  #throttleFn = (func) => () => {
     const now = Date.now();
 
-    if (now - this.lastClickTime >= this.throttle) {
+    if (now - this.#lastClickTime >= this.#throttle) {
       func();
 
-      this.lastClickTime = now;
+      this.#lastClickTime = now;
     }
   };
 
-  play = async (url = this.file) => {
-    const throttledPlay = this.throttleFn(() => this.audio(url));
+  play = async (url = this.#file) => {
+    const throttledPlay = this.#throttleFn(() => this.#audio(url));
 
     try {
       await throttledPlay();
     } catch (error) {
-      if (this.debug) {
+      if (this.#debug) {
         console.error('Audio playback error: ', error);
       }
 
-      if (this.callback) {
-        this.callback?.(error);
+      if (this.#callback) {
+        this.#callback?.(error);
       } else {
         throw error;
       }
