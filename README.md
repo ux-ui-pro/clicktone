@@ -9,8 +9,8 @@
 
 </div>
 
-<p align="center">A simple class that provides a convenient abstraction for handling audio playback by web applications, with support for iOS devices.</p>
-<p align="center"><sup>800B gzipped</sup></p>
+<p align="center">ClickTone is designed to control audio playback with various settings, including volume control, callback and debug mode. It also includes iOS support.</p>
+<p align="center"><sup>850B gzipped</sup></p>
 <p align="center"><a href="https://codepen.io/ux-ui/pen/yLwbmMr">Demo</a></p>
 <br>
 
