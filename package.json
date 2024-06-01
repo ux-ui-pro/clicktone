@@ -1,6 +1,6 @@
 {
   "name": "clicktone",
-  "version": "1.5.1",
+  "version": "1.5.2",
   "description": "ClickTone is designed to control audio playback with various settings, including volume control, callback and debug mode. It also includes iOS support.",
   "author": "ux-ui.pro",
   "license": "MIT",

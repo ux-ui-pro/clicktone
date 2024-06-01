@@ -31,7 +31,7 @@ import ClickTone from 'clicktone';
 
 &#10148; **Usage**
 
-<sub>Class uses the Web Audio API, which supports many audio file formats: MP3, WAV, OGG, AAC and others. Please note that not all browsers support these formats.</sub>
+<sub>ClickTone uses the Web Audio API, which supports many audio file formats: MP3, WAV, OGG, AAC and others. Note that not all browsers support these formats.</sub>
 ```javascript
 const click = new ClickTone({
   file: './sound.mp3',
@@ -43,6 +43,17 @@ const click = new ClickTone({
 
 myButton.addEventListener('click', () => click.play());
 ```
+<br>
+
+&#10148; **Options**
+
+|   Option   |                Type                 | Default  | Description                                                                                  |
+|:----------:|:-----------------------------------:|:--------:|:---------------------------------------------------------------------------------------------|
+|   `file`   |              `string`               |  `none`  | The URL of the audio file to be played.                                                      |
+|  `volume`  |              `number`               |  `1.0`   | Volume level for the audio playback, ranging from 0.0 (mute) to 1.0 (full volume).           |
+| `callback` | `((error?: Error) => void) \| null` |  `null`  | A callback function to be executed after the audio finishes playing, or if an error occurs.  |
+| `throttle` |              `number`               |   `0`    | Minimum time (in milliseconds) between successive audio plays to prevent rapid repeat plays. |
+|  `debug`   |              `boolean`              | `false`  | If `true`, debug information and errors will be logged to the console.                       |
 <br>
 
 &#10148; **License**
