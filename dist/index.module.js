@@ -44,7 +44,8 @@ class $643fcf18b2d2e76f$var$ClickTone {
             this.audioCache[url] = audioData;
             return audioData;
         } catch (error) {
-            if (this.debug) console.error("Audio loading and decoding error: ", error);
+            if (this.debug) // eslint-disable-next-line no-console
+            console.error("Audio loading and decoding error: ", error);
             throw new Error(`Something went wrong when loading and decoding the audio: ${error.message}`);
         }
     };
@@ -63,25 +64,25 @@ class $643fcf18b2d2e76f$var$ClickTone {
             };
             source.start(0);
         } catch (error) {
-            if (this.debug) console.error("Audio playback error: ", error);
+            if (this.debug) // eslint-disable-next-line no-console
+            console.error("Audio playback error: ", error);
             throw new Error(`Something went wrong while playing audio: ${error.message}`);
         }
     };
-    throttleFn = (func)=>{
-        return ()=>{
+    throttleFn = (func)=>()=>{
             const now = Date.now();
             if (now - this.lastClickTime >= this.throttle) {
                 func();
                 this.lastClickTime = now;
             }
         };
-    };
     play = async (url = this.file)=>{
         const throttledPlay = this.throttleFn(()=>this.playAudio(url));
         try {
             await throttledPlay();
         } catch (error) {
-            if (this.debug) console.error("Audio playback error: ", error);
+            if (this.debug) // eslint-disable-next-line no-console
+            console.error("Audio playback error: ", error);
             if (this.callback) this.callback(error);
             else throw error;
         }

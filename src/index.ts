@@ -6,12 +6,19 @@ declare global {
 
 class ClickTone {
   private readonly file: string;
+
   private readonly volume: number;
+
   private readonly callback: ((error?: Error) => void) | null;
+
   private readonly throttle: number;
+
   private readonly debug: boolean;
+
   private lastClickTime: number;
+
   private readonly audioCache: Record<string, AudioBuffer>;
+
   private audioContext: AudioContext | null;
 
   constructor({
@@ -75,6 +82,7 @@ class ClickTone {
       return audioData;
     } catch (error) {
       if (this.debug) {
+        // eslint-disable-next-line no-console
         console.error('Audio loading and decoding error: ', error);
       }
 
@@ -104,6 +112,7 @@ class ClickTone {
       source.start(0);
     } catch (error) {
       if (this.debug) {
+        // eslint-disable-next-line no-console
         console.error('Audio playback error: ', error);
       }
 
@@ -111,16 +120,14 @@ class ClickTone {
     }
   };
 
-  private throttleFn = (func: () => void): (() => void) => {
-    return () => {
-      const now = Date.now();
+  private throttleFn = (func: () => void): (() => void) => () => {
+    const now = Date.now();
 
-      if (now - this.lastClickTime >= this.throttle) {
-        func();
+    if (now - this.lastClickTime >= this.throttle) {
+      func();
 
-        this.lastClickTime = now;
-      }
-    };
+      this.lastClickTime = now;
+    }
   };
 
   public play = async (url: string = this.file): Promise<void> => {
@@ -130,6 +137,7 @@ class ClickTone {
       await throttledPlay();
     } catch (error) {
       if (this.debug) {
+        // eslint-disable-next-line no-console
         console.error('Audio playback error: ', error);
       }
 
