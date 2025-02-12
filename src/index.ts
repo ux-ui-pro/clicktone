@@ -6,19 +6,12 @@ declare global {
 
 class ClickTone {
   private readonly file: string;
-
   private readonly volume: number;
-
   private readonly callback: ((error?: Error) => void) | null;
-
   private readonly throttle: number;
-
   private readonly debug: boolean;
-
   private lastClickTime: number;
-
   private readonly audioCache: Record<string, AudioBuffer>;
-
   private audioContext: AudioContext | null;
 
   constructor({
@@ -51,23 +44,29 @@ class ClickTone {
     }
   }
 
-  private iOSFixAudioContext = (): void => {
+  private iOSFixAudioContext(): void {
     if (this.audioContext && this.audioContext.state === 'suspended' && 'ontouchstart' in window) {
       const unlock = (): void => {
         if (this.audioContext!.state === 'suspended') {
-          this.audioContext!.resume().then(() => {
-            document.body.removeEventListener('touchstart', unlock);
-            document.body.removeEventListener('touchend', unlock);
-          });
+          void this.audioContext!.resume()
+            .then(() => {
+              document.body.removeEventListener('touchstart', unlock);
+              document.body.removeEventListener('touchend', unlock);
+            })
+            .catch((error) => {
+              if (this.debug) {
+                console.error('AudioContext resume error:', error);
+              }
+            });
         }
       };
 
       document.body.addEventListener('touchstart', unlock, false);
       document.body.addEventListener('touchend', unlock, false);
     }
-  };
+  }
 
-  private fetchAndDecodeAudio = async (url: string): Promise<AudioBuffer> => {
+  private async fetchAndDecodeAudio(url: string): Promise<AudioBuffer> {
     try {
       if (this.audioCache[url]) {
         return this.audioCache[url];
@@ -82,15 +81,16 @@ class ClickTone {
       return audioData;
     } catch (error) {
       if (this.debug) {
-        // eslint-disable-next-line no-console
         console.error('Audio loading and decoding error: ', error);
       }
 
-      throw new Error(`Something went wrong when loading and decoding the audio: ${(error as Error).message}`);
+      throw new Error(
+        `Something went wrong when loading and decoding the audio: ${(error as Error).message}`,
+      );
     }
-  };
+  }
 
-  private playAudio = async (url: string): Promise<void> => {
+  private async playAudio(url: string): Promise<void> {
     this.initAudioContext();
 
     try {
@@ -103,7 +103,7 @@ class ClickTone {
       source.connect(gainNode);
       gainNode.connect(this.audioContext!.destination);
 
-      source.onended = () => {
+      source.onended = (): void => {
         if (this.callback) {
           this.callback();
         }
@@ -112,32 +112,36 @@ class ClickTone {
       source.start(0);
     } catch (error) {
       if (this.debug) {
-        // eslint-disable-next-line no-console
         console.error('Audio playback error: ', error);
       }
 
       throw new Error(`Something went wrong while playing audio: ${(error as Error).message}`);
     }
-  };
+  }
 
-  private throttleFn = (func: () => void): (() => void) => () => {
-    const now = Date.now();
+  private throttleFn(func: () => Promise<void>): () => void {
+    return () => {
+      const now = Date.now();
 
-    if (now - this.lastClickTime >= this.throttle) {
-      func();
+      if (now - this.lastClickTime >= this.throttle) {
+        void func().catch((error) => {
+          if (this.debug) {
+            console.error('Error in throttled function:', error);
+          }
+        });
 
-      this.lastClickTime = now;
-    }
-  };
+        this.lastClickTime = now;
+      }
+    };
+  }
 
-  public play = async (url: string = this.file): Promise<void> => {
+  public play(url: string = this.file): void {
     const throttledPlay = this.throttleFn(() => this.playAudio(url));
 
     try {
-      await throttledPlay();
+      throttledPlay();
     } catch (error) {
       if (this.debug) {
-        // eslint-disable-next-line no-console
         console.error('Audio playback error: ', error);
       }
 
@@ -147,7 +151,7 @@ class ClickTone {
         throw error;
       }
     }
-  };
+  }
 }
 
 export default ClickTone;
