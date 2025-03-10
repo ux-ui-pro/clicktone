@@ -99,7 +99,9 @@ class ClickTone {
       const gainNode = this.audioContext!.createGain();
 
       source.buffer = audioData;
+
       gainNode.gain.value = this.volume;
+
       source.connect(gainNode);
       gainNode.connect(this.audioContext!.destination);
 

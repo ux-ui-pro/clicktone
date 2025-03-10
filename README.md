@@ -34,8 +34,8 @@ import ClickTone from 'clicktone';
 <sub>ClickTone uses the Web Audio API, which supports many audio file formats: MP3, WAV, OGG, AAC and others. Note that not all browsers support these formats.</sub>
 ```javascript
 const sound = new ClickTone({
-  // file: './sound.mp3',
-  file: new URL('./sound.mp3', import.meta.url).href,
+  file: './sound.mp3',
+  // file: new URL('./sound.mp3', import.meta.url).href,
   volume: 0.7,
   throttle: 100,
   callback: () => { console.log('Playback ended') },
