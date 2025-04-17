@@ -181,7 +181,6 @@ class ClickTone {
     } catch (error) {
       if (this.debug) console.error('Audio playback error:', error);
       if (this.callback) this.callback(error as Error);
-
       else throw error;
     }
   }
