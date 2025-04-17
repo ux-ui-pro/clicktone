@@ -9,8 +9,8 @@
 
 </div>
 
-<p align="center">ClickTone is designed to control audio playback with various settings, including volume control, callback and debug mode. It also includes iOS support.</p>
-<p align="center"><sup>1kB gzipped</sup></p>
+<p align="center">ClickTone is a lightweight helper for UI sound feedback. It wraps the Web Audio API, giving you instant click‑sounds with volume control, throttling, callbacks, and an iOS resume workaround.</p>
+<p align="center"><sup>1.2kB gzipped</sup></p>
 <p align="center"><a href="https://codepen.io/ux-ui/pen/yLwbmMr">Demo</a></p>
 <br>
 
@@ -31,32 +31,43 @@ import ClickTone from 'clicktone';
 
 &#10148; **Usage**
 
-<sub>ClickTone uses the Web Audio API, which supports many audio file formats: MP3, WAV, OGG, AAC and others. Note that not all browsers support these formats.</sub>
+```html
+<audio preload="auto">
+  <source id="click-source" src="./click.mp3" type="audio/mpeg" />
+  <source src="./click.ogg" type="audio/ogg" />
+</audio>
+```
+
 ```javascript
 const sound = new ClickTone({
-  file: './sound.mp3',
+  // Any of the forms work:
+  // file: './sound.mp3',
   // file: new URL('./sound.mp3', import.meta.url).href,
+  // file: document.querySelector('#click-source') as HTMLSourceElement,
+  file: { id: 'click-source' },
+
   volume: 0.7,
   throttle: 100,
-  callback: () => { console.log('Playback ended') },
+  callback: () => console.log('done'),
   debug: true,
 });
 
-const play = () => sound.play();
-
-button.addEventListener('pointerdown', play);
+button.addEventListener('click', () => click.play());
 ```
+<sup>ClickTone uses the Web Audio API, which supports many audio file formats: MP3, WAV, OGG, AAC and others. Note that not all browsers support these formats.</sup>
 <br>
+<sup>Tip: you can also override the source at call‑time: click.play('./alt.wav').</sup>
+<br><br>
 
 &#10148; **Options**
 
-|   Option   |                Type                 | Default  | Description                                                                                  |
-|:----------:|:-----------------------------------:|:--------:|:---------------------------------------------------------------------------------------------|
-|   `file`   |              `string`               |  `none`  | The URL of the audio file to be played.                                                      |
-|  `volume`  |              `number`               |  `1.0`   | Volume level for the audio playback, ranging from 0.0 (mute) to 1.0 (full volume).           |
-| `callback` | `((error?: Error) => void) \| null` |  `null`  | A callback function to be executed after the audio finishes playing, or if an error occurs.  |
-| `throttle` |              `number`               |   `0`    | Minimum time (in milliseconds) between successive audio plays to prevent rapid repeat plays. |
-|  `debug`   |              `boolean`              | `false`  | If `true`, debug information and errors will be logged to the console.                       |
+|   Option   |                      Type                       | Default | Description                                                                                                                     |
+|:----------:|:-----------------------------------------------:|:-------:|:--------------------------------------------------------------------------------------------------------------------------------|
+|   `file`   | `string \| HTMLSourceElement \| { id: string }` |    –    | Audio source. Either a direct URL, an actual `<source>` element, or an object whose id maps to a `<source>` already in the DOM. |
+|  `volume`  |                    `number`                     |   `1`   | Playback volume `0`–`1`.                                                                                                        |
+| `callback` |       `((error?: Error) => void) \| null`       | `null`  | Called after playback ends or if an error occurs.                                                                               |
+| `throttle` |                    `number`                     |   `0`   | Debounce interval in ms. Playback requests arriving sooner are ignored.                                                         |
+|  `debug`   |                    `boolean`                    | `false` | Log internal errors/warnings to the console.                                                                                    |
 <br>
 
 &#10148; **License**
