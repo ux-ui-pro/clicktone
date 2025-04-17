@@ -4,8 +4,10 @@ declare global {
   }
 }
 
+type FileSource = string | HTMLSourceElement | { id: string };
+
 class ClickTone {
-  private readonly file: string;
+  private readonly fileSource: FileSource;
   private readonly volume: number;
   private readonly callback: ((error?: Error) => void) | null;
   private readonly throttle: number;
@@ -21,13 +23,13 @@ class ClickTone {
     throttle = 0,
     debug = false,
   }: {
-    file: string;
+    file: FileSource;
     volume?: number;
     callback?: ((error?: Error) => void) | null;
     throttle?: number;
     debug?: boolean;
   }) {
-    this.file = file;
+    this.fileSource = file;
     this.volume = volume;
     this.callback = callback;
     this.throttle = throttle;
@@ -35,6 +37,40 @@ class ClickTone {
     this.lastClickTime = 0;
     this.audioCache = {};
     this.audioContext = null;
+  }
+
+  private resolveFileUrl(file: FileSource): string {
+    if (typeof file === 'string') {
+      return file;
+    }
+
+    if (file instanceof HTMLSourceElement) {
+      if (!file.src) {
+        throw new Error('<source> element has no "src" attribute.');
+      }
+
+      return file.src;
+    }
+
+    if (typeof file === 'object' && file !== null && 'id' in file) {
+      const el = document.getElementById(String(file.id));
+
+      if (!el) {
+        throw new Error(`No element found with id "${file.id}".`);
+      }
+
+      if (!(el instanceof HTMLSourceElement)) {
+        throw new Error(`Element with id "${file.id}" is not a <source> element.`);
+      }
+
+      if (!el.src) {
+        throw new Error(`<source> element with id "${file.id}" has no "src" attribute.`);
+      }
+
+      return el.src;
+    }
+
+    throw new Error('Invalid "file" value. Expected string, HTMLSourceElement, or { id: string }.');
   }
 
   private initAudioContext(): void {
@@ -54,9 +90,7 @@ class ClickTone {
               document.body.removeEventListener('touchend', unlock);
             })
             .catch((error) => {
-              if (this.debug) {
-                console.error('AudioContext resume error:', error);
-              }
+              if (this.debug) console.error('AudioContext resume error:', error);
             });
         }
       };
@@ -68,9 +102,7 @@ class ClickTone {
 
   private async fetchAndDecodeAudio(url: string): Promise<AudioBuffer> {
     try {
-      if (this.audioCache[url]) {
-        return this.audioCache[url];
-      }
+      if (this.audioCache[url]) return this.audioCache[url];
 
       const response = await fetch(url);
       const buffer = await response.arrayBuffer();
@@ -80,9 +112,7 @@ class ClickTone {
 
       return audioData;
     } catch (error) {
-      if (this.debug) {
-        console.error('Audio loading and decoding error: ', error);
-      }
+      if (this.debug) console.error('Audio loading/decoding error:', error);
 
       throw new Error(
         `Something went wrong when loading and decoding the audio: ${(error as Error).message}`,
@@ -92,30 +122,24 @@ class ClickTone {
 
   private async playAudio(url: string): Promise<void> {
     this.initAudioContext();
-
     try {
       const audioData = await this.fetchAndDecodeAudio(url);
       const source = this.audioContext!.createBufferSource();
       const gainNode = this.audioContext!.createGain();
 
       source.buffer = audioData;
-
       gainNode.gain.value = this.volume;
 
       source.connect(gainNode);
       gainNode.connect(this.audioContext!.destination);
 
       source.onended = (): void => {
-        if (this.callback) {
-          this.callback();
-        }
+        if (this.callback) this.callback();
       };
 
       source.start(0);
     } catch (error) {
-      if (this.debug) {
-        console.error('Audio playback error: ', error);
-      }
+      if (this.debug) console.error('Audio playback error:', error);
 
       throw new Error(`Something went wrong while playing audio: ${(error as Error).message}`);
     }
@@ -127,9 +151,7 @@ class ClickTone {
 
       if (now - this.lastClickTime >= this.throttle) {
         void func().catch((error) => {
-          if (this.debug) {
-            console.error('Error in throttled function:', error);
-          }
+          if (this.debug) console.error('Error in throttled function:', error);
         });
 
         this.lastClickTime = now;
@@ -137,21 +159,30 @@ class ClickTone {
     };
   }
 
-  public play(url: string = this.file): void {
+  public play(file?: FileSource): void {
+    let url: string;
+
+    try {
+      url = this.resolveFileUrl(file ?? this.fileSource);
+    } catch (error) {
+      if (this.callback) {
+        this.callback(error as Error);
+
+        return;
+      }
+
+      throw error;
+    }
+
     const throttledPlay = this.throttleFn(() => this.playAudio(url));
 
     try {
       throttledPlay();
     } catch (error) {
-      if (this.debug) {
-        console.error('Audio playback error: ', error);
-      }
+      if (this.debug) console.error('Audio playback error:', error);
+      if (this.callback) this.callback(error as Error);
 
-      if (this.callback) {
-        this.callback(error as Error);
-      } else {
-        throw error;
-      }
+      else throw error;
     }
   }
 }
