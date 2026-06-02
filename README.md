@@ -4,9 +4,11 @@ A lightweight helper for UI sound feedback. It wraps the Web Audio API with a ti
 
 - Single shared `AudioContext` for every instance (no iOS context-limit issues).
 - Reliable autoplay unlock: eager gesture listeners, synchronous resume, silent priming ping, re-resume on `visibilitychange`.
+- Self-healing on iOS/Safari: detects a "zombie" context after tab/app switch or lock-screen and transparently rebuilds it on the next interaction.
 - Automatic format fallback via `canPlayType` (great for Safari, which dislikes OGG/Opus).
 - Shared decode cache, throttling, volume control, and subtle pitch variation.
 - Event-based (`EventTarget`) with a typed `on()` / `once()` API; `play()` also returns a `Promise`.
+- [Demo](https://codepen.io/ux-ui/pen/yLwbmMr)
 
 ## Install
 
@@ -103,6 +105,7 @@ Mobile browsers (especially Safari on iOS) block audio until the user interacts 
 - One shared `AudioContext` (with `latencyHint: 'interactive'`) — one unlock unlocks every instance.
 - Global gesture listeners (`pointerdown` / `pointerup` / `touchstart` / `touchend` / `keydown`) resume the context on the first interaction anywhere on the page.
 - A silent priming ping is played right after unlock, and the context is re-resumed on `visibilitychange`.
+- Lifecycle recovery for Safari/iOS: after a tab switch, app switch, or lock-screen, WebKit can leave the context in a "zombie" state (it reports `running` but stays silent). ClickTone probes for this on return and, if the context is dead, rebuilds it inside the next user gesture — buffers re-decode and the gain graph rebinds automatically.
 - Decoded buffers are cached and shared, so the first click is not delayed by the network.
 
 Pass `preload: true` (or call `sound.preload()`) so the buffer is decoded ahead of the first click. Include an MP3/AAC source for Safari — OGG/Opus is not reliably supported there.

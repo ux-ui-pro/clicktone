@@ -10,7 +10,13 @@ type FakeBufferSource = {
   stop: () => void;
 };
 
-const installAudioMocks = (): { fetchSpy: ReturnType<typeof vi.fn> } => {
+const installAudioMocks = (
+  options: { advancingTime?: boolean } = {},
+): {
+  fetchSpy: ReturnType<typeof vi.fn>;
+  instances: { closed: boolean }[];
+} => {
+  const { advancingTime = false } = options;
   const fetchSpy = vi.fn(async () => ({
     ok: true,
     status: 200,
@@ -18,14 +24,34 @@ const installAudioMocks = (): { fetchSpy: ReturnType<typeof vi.fn> } => {
     arrayBuffer: async () => new ArrayBuffer(8),
   }));
 
+  const instances: { closed: boolean }[] = [];
+
   const fakeAudioContextClass = class FakeAudioContext {
     state: AudioContextState = 'suspended';
     sampleRate = 44100;
-    currentTime = 0;
+    #t = 0;
     destination = {};
+    closed = false;
+
+    constructor() {
+      instances.push(this);
+    }
+
+    get currentTime(): number {
+      // A healthy running context keeps advancing currentTime; a zombie one
+      // reports "running" but stays frozen at 0.
+      if (advancingTime) this.#t += 0.05;
+
+      return this.#t;
+    }
 
     async resume(): Promise<void> {
       this.state = 'running';
+    }
+
+    async close(): Promise<void> {
+      this.closed = true;
+      this.state = 'closed';
     }
 
     createGain(): GainNode {
@@ -72,7 +98,7 @@ const installAudioMocks = (): { fetchSpy: ReturnType<typeof vi.fn> } => {
   vi.stubGlobal('AudioContext', fakeAudioContextClass);
   vi.stubGlobal('webkitAudioContext', fakeAudioContextClass);
 
-  return { fetchSpy };
+  return { fetchSpy, instances };
 };
 
 describe('ClickTone', () => {
@@ -142,5 +168,74 @@ describe('ClickTone', () => {
 
     expect(fetchSpy).toHaveBeenCalledTimes(1);
     expect(fetchSpy).toHaveBeenCalledWith('/assets/a.wav');
+  });
+
+  const withAppleUA = async (run: () => Promise<void>): Promise<void> => {
+    const originalUA = navigator.userAgent;
+    Object.defineProperty(navigator, 'userAgent', {
+      value:
+        'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1',
+      configurable: true,
+    });
+
+    try {
+      await run();
+    } finally {
+      Object.defineProperty(navigator, 'userAgent', {
+        value: originalUA,
+        configurable: true,
+      });
+    }
+  };
+
+  const wait = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
+
+  it('hard-recreates a zombie AudioContext after a lifecycle return on Apple WebKit', async () => {
+    await withAppleUA(async () => {
+      const { fetchSpy, instances } = installAudioMocks({ advancingTime: false });
+      const { ClickTone } = await import('../../src/main');
+      const sound = new ClickTone({ src: '/assets/click.wav' });
+
+      await sound.play();
+
+      expect(instances).toHaveLength(1);
+      expect(fetchSpy).toHaveBeenCalledTimes(1);
+
+      // Returning to the tab kicks off a background zombie probe; the frozen
+      // currentTime marks the context as dead.
+      document.dispatchEvent(new Event('visibilitychange'));
+      await wait(300);
+
+      await sound.play();
+
+      // Old context closed, a fresh one built, and the decode cache dropped.
+      expect(instances).toHaveLength(2);
+      expect(instances[0].closed).toBe(true);
+      expect(fetchSpy).toHaveBeenCalledTimes(2);
+    });
+  });
+
+  it('keeps a healthy AudioContext after a lifecycle return on Apple WebKit', async () => {
+    await withAppleUA(async () => {
+      const { fetchSpy, instances } = installAudioMocks({ advancingTime: true });
+      const { ClickTone } = await import('../../src/main');
+      const sound = new ClickTone({ src: '/assets/click.wav' });
+
+      await sound.play();
+
+      expect(instances).toHaveLength(1);
+      expect(fetchSpy).toHaveBeenCalledTimes(1);
+
+      // Advancing currentTime means the probe finds the context alive, so no
+      // recreate and the decode cache survives.
+      document.dispatchEvent(new Event('visibilitychange'));
+      await wait(300);
+
+      await sound.play();
+
+      expect(instances).toHaveLength(1);
+      expect(instances[0].closed).toBe(false);
+      expect(fetchSpy).toHaveBeenCalledTimes(1);
+    });
   });
 });

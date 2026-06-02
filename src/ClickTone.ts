@@ -18,6 +18,8 @@ export class ClickTone extends EventTarget {
   #debug: boolean;
   #lastPlay = 0;
   #gain: GainNode | null = null;
+  #needsGainRefresh = false;
+  #visibilityHandler: (() => void) | null = null;
   #destroyed = false;
 
   constructor({
@@ -45,6 +47,13 @@ export class ClickTone extends EventTarget {
 
     engine.prime();
     engine.onUnlock(() => this.#emit('unlock'));
+
+    if (typeof document !== 'undefined') {
+      this.#visibilityHandler = (): void => {
+        if (!document.hidden) this.#needsGainRefresh = true;
+      };
+      document.addEventListener('visibilitychange', this.#visibilityHandler);
+    }
 
     if (preload) void this.preload();
   }
@@ -127,10 +136,12 @@ export class ClickTone extends EventTarget {
     }
 
     try {
-      const buffer = await engine.decode(url);
-      const ctx = engine.context();
+      const ctx = await engine.ensureRunning();
 
       if (!ctx || this.#destroyed) return;
+      if (ctx.state !== 'running') throw new Error('AudioContext is not running.');
+
+      const buffer = await engine.decode(url);
 
       if (ctx.state !== 'running') await ctx.resume().catch(noop);
 
@@ -187,6 +198,10 @@ export class ClickTone extends EventTarget {
     if (this.#destroyed) return;
 
     this.#destroyed = true;
+    if (this.#visibilityHandler && typeof document !== 'undefined') {
+      document.removeEventListener('visibilitychange', this.#visibilityHandler);
+      this.#visibilityHandler = null;
+    }
     this.#gain?.disconnect();
     this.#gain = null;
   }
@@ -202,6 +217,11 @@ export class ClickTone extends EventTarget {
       this.#gain = ctx.createGain();
       this.#gain.gain.value = this.#muted ? 0 : this.#volume;
       this.#gain.connect(ctx.destination);
+      this.#needsGainRefresh = false;
+    } else if (this.#needsGainRefresh) {
+      this.#gain.disconnect();
+      this.#gain.connect(ctx.destination);
+      this.#needsGainRefresh = false;
     }
 
     return this.#gain;
