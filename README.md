@@ -1,75 +1,147 @@
-<br>
-<p align="center"><strong>clicktone</strong></p>
+# clicktone
 
-<div align="center">
+A lightweight helper for UI sound feedback. It wraps the Web Audio API with a tiny, event-based API and a rock-solid iOS/Safari unlock.
 
-[![npm](https://img.shields.io/npm/v/clicktone.svg?colorB=brightgreen)](https://www.npmjs.com/package/clicktone)
-[![GitHub package version](https://img.shields.io/github/package-json/v/ux-ui-pro/clicktone.svg)](https://github.com/ux-ui-pro/clicktone)
-[![NPM Downloads](https://img.shields.io/npm/dm/clicktone.svg?style=flat)](https://www.npmjs.org/package/clicktone)
+- Single shared `AudioContext` for every instance (no iOS context-limit issues).
+- Reliable autoplay unlock: eager gesture listeners, synchronous resume, silent priming ping, re-resume on `visibilitychange`.
+- Automatic format fallback via `canPlayType` (great for Safari, which dislikes OGG/Opus).
+- Shared decode cache, throttling, volume control, and subtle pitch variation.
+- Event-based (`EventTarget`) with a typed `on()` / `once()` API; `play()` also returns a `Promise`.
 
-</div>
+## Install
 
-<p align="center">ClickTone is a lightweight helper for UI sound feedback. It wraps the Web Audio API, giving you instant click‑sounds with volume control, throttling, callbacks, and an iOS resume workaround.</p>
-<p align="center"><sup>1.2kB gzipped</sup></p>
-<p align="center"><a href="https://codepen.io/ux-ui/pen/yLwbmMr">Demo</a></p>
-<br>
-
-&#10148; **Install**
-
-```console
+```bash
 yarn add clicktone
 ```
 
-<br>
+## Usage (TypeScript)
 
-&#10148; **Import**
+```ts
+import { ClickTone } from 'clicktone';
 
-```javascript
-import ClickTone from 'clicktone';
-```
-<br>
+const button = document.getElementById('clickBtn');
 
-&#10148; **Usage**
+if (!button) {
+  throw new Error('Demo DOM is not ready');
+}
 
-```html
-<audio preload="auto">
-  <source id="click-source" src="./click.mp3" type="audio/mpeg" />
-  <source src="./click.ogg" type="audio/ogg" />
-</audio>
-```
-
-```javascript
 const sound = new ClickTone({
-  // Any of the forms work:
-  // file: './sound.mp3',
-  // file: new URL('./sound.mp3', import.meta.url).href,
-  // file: document.querySelector('#click-source') as HTMLSourceElement,
-  file: { id: 'click-source' },
+  // A single source…
+  src: new URL('./assets/click.mp3', import.meta.url).href,
+
+  // …or a fallback list; the best supported format is picked automatically:
+  // src: ['./click.aac', './click.ogg', './click.mp3'],
 
   volume: 0.7,
   throttle: 100,
-  callback: () => console.log('done'),
-  debug: true,
+  pitchVariation: 0.08,
+  preload: true,
 });
 
-button.addEventListener('click', () => click.play());
+sound.on('error', (error) => console.error(error));
+button.addEventListener('click', () => sound.play());
 ```
-<sup>ClickTone uses the Web Audio API, which supports many audio file formats: MP3, WAV, OGG, AAC and others. Note that not all browsers support these formats.</sup>
-<br>
-<sup>Tip: you can also override the source at call‑time: click.play('./alt.wav').</sup>
-<br><br>
 
-&#10148; **Options**
+The `src` option also accepts DOM elements: an `HTMLSourceElement`, an `HTMLAudioElement` (its child `<source>` elements become the fallback list), or `{ id }` referencing either of those by id.
 
-|   Option   |                      Type                       | Default | Description                                                                                                                     |
-|:----------:|:-----------------------------------------------:|:-------:|:--------------------------------------------------------------------------------------------------------------------------------|
-|   `file`   | `string \| HTMLSourceElement \| { id: string }` |    –    | Audio source. Either a direct URL, an actual `<source>` element, or an object whose id maps to a `<source>` already in the DOM. |
-|  `volume`  |                    `number`                     |   `1`   | Playback volume `0`–`1`.                                                                                                        |
-| `callback` |       `((error?: Error) => void) \| null`       | `null`  | Called after playback ends or if an error occurs.                                                                               |
-| `throttle` |                    `number`                     |   `0`   | Debounce interval in ms. Playback requests arriving sooner are ignored.                                                         |
-|  `debug`   |                    `boolean`                    | `false` | Log internal errors/warnings to the console.                                                                                    |
-<br>
+## Usage (Vue 3)
 
-&#10148; **License**
+```vue
+<script setup lang="ts">
+import { onBeforeUnmount, onMounted, shallowRef } from 'vue';
+import { ClickTone } from 'clicktone';
 
-clicktone is released under MIT license.
+const sound = shallowRef<ClickTone | null>(null);
+
+onMounted(() => {
+  sound.value = new ClickTone({
+    src: new URL('./assets/click.mp3', import.meta.url).href,
+    volume: 0.7,
+    pitchVariation: 0.08,
+    preload: true,
+  });
+});
+
+onBeforeUnmount(() => {
+  sound.value?.destroy();
+  sound.value = null;
+});
+</script>
+
+<template>
+  <button @click="sound?.play()">Click</button>
+</template>
+```
+
+## Events
+
+`ClickTone` extends `EventTarget`. Subscribe with the typed `on()` / `once()` helpers (which return an unsubscribe function) or with native `addEventListener`.
+
+```ts
+const off = sound.on('end', () => console.log('finished'));
+sound.on('error', (error) => console.error(error));
+sound.once('unlock', () => console.log('audio unlocked'));
+
+off();
+
+// play() also resolves when playback ends:
+await sound.play();
+```
+
+| Event    | Detail        | Fired when                                 |
+|:---------|:--------------|:-------------------------------------------|
+| `play`   | —             | A buffer source has started.               |
+| `end`    | —             | Playback finished.                         |
+| `unlock` | —             | The shared `AudioContext` became playable. |
+| `load`   | `AudioBuffer` | A source was fetched and decoded.          |
+| `error`  | `Error`       | Loading, decoding, or playback failed.     |
+
+## iOS / Safari unlock
+
+Mobile browsers (especially Safari on iOS) block audio until the user interacts with the page, an `AudioContext` must be resumed synchronously inside a user gesture, and iOS caps the number of contexts you may create. ClickTone handles all of this:
+
+- One shared `AudioContext` (with `latencyHint: 'interactive'`) — one unlock unlocks every instance.
+- Global gesture listeners (`pointerdown` / `pointerup` / `touchstart` / `touchend` / `keydown`) resume the context on the first interaction anywhere on the page.
+- A silent priming ping is played right after unlock, and the context is re-resumed on `visibilitychange`.
+- Decoded buffers are cached and shared, so the first click is not delayed by the network.
+
+Pass `preload: true` (or call `sound.preload()`) so the buffer is decoded ahead of the first click. Include an MP3/AAC source for Safari — OGG/Opus is not reliably supported there.
+
+```ts
+await sound.preload();
+
+// Or unlock the shared context on a known first interaction:
+document.addEventListener('pointerdown', () => ClickTone.unlock(), { once: true });
+```
+
+## Options
+
+| Option           | Type                                                                                        | Default | Description                                                                  |
+|:-----------------|:--------------------------------------------------------------------------------------------|:-------:|:-----------------------------------------------------------------------------|
+| `src`            | `string \| URL \| {src,type?} \| {id} \| HTMLSourceElement \| HTMLAudioElement \| Array<…>` |    —    | Audio source(s). Pass an array to enable automatic format fallback.          |
+| `volume`         | `number`                                                                                    |   `1`   | Playback volume `0`–`1`.                                                     |
+| `muted`          | `boolean`                                                                                   | `false` | Start muted. Toggle later via `setMuted()` / `toggleMuted()`.                |
+| `throttle`       | `number`                                                                                    |   `0`   | Debounce interval in ms. Requests arriving sooner are ignored.               |
+| `pitchVariation` | `number`                                                                                    |   `0`   | `0`–`1`. Random playback-rate jitter so repeated clicks don't sound identical. |
+| `preload`        | `boolean`                                                                                   | `false` | Fetch and decode the buffer on construction.                                 |
+| `debug`          | `boolean`                                                                                   | `false` | Log internal errors to the console (in addition to the `error` event).       |
+
+## Methods
+
+```ts
+await sound.play();          // optionally play(src) to override the source
+await sound.preload();       // optionally preload(src)
+sound.unlock();
+sound.setVolume(0.5);        // smoothly ramped
+sound.setMuted(true);
+sound.toggleMuted();
+sound.on('end', () => {});   // on(type, fn) / once(type, fn)
+sound.destroy();
+
+ClickTone.unlock();          // static: unlock the shared context
+ClickTone.unlocked;          // static: whether the shared context is unlocked
+```
+
+## License
+
+MIT
