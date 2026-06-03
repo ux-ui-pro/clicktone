@@ -5,8 +5,17 @@ import type {
   ClickToneEventDetail,
   ClickToneEventType,
   ClickToneOptions,
+  PlayOptions,
+  ReplayBehavior,
   SoundInput,
 } from './types';
+
+type ActivePlayback = {
+  source: AudioBufferSourceNode;
+  url: string;
+  loop: boolean;
+  stopped: boolean;
+};
 
 export class ClickTone extends EventTarget {
   #url: string | null = null;
@@ -15,11 +24,15 @@ export class ClickTone extends EventTarget {
   #muted: boolean;
   #throttle: number;
   #pitch: number;
+  #loop: boolean;
+  #replay: ReplayBehavior;
   #debug: boolean;
   #lastPlay = 0;
   #gain: GainNode | null = null;
+  #activePlaybacks = new Set<ActivePlayback>();
   #needsGainRefresh = false;
   #visibilityHandler: (() => void) | null = null;
+  #recreateUnsubscribe: (() => void) | null = null;
   #destroyed = false;
 
   constructor({
@@ -29,6 +42,8 @@ export class ClickTone extends EventTarget {
     throttle = 0,
     pitchVariation = 0,
     preload = false,
+    loop = false,
+    replay = 'overlap',
     debug = false,
   }: ClickToneOptions) {
     super();
@@ -37,6 +52,8 @@ export class ClickTone extends EventTarget {
     this.#muted = muted;
     this.#throttle = Math.max(0, throttle);
     this.#pitch = Math.min(1, Math.max(0, pitchVariation));
+    this.#loop = loop;
+    this.#replay = replay;
     this.#debug = debug;
 
     try {
@@ -47,6 +64,7 @@ export class ClickTone extends EventTarget {
 
     engine.prime();
     engine.onUnlock(() => this.#emit('unlock'));
+    this.#recreateUnsubscribe = engine.onRecreate(() => this.#restartActiveLoops());
 
     if (typeof document !== 'undefined') {
       this.#visibilityHandler = (): void => {
@@ -73,6 +91,10 @@ export class ClickTone extends EventTarget {
 
   get muted(): boolean {
     return this.#muted;
+  }
+
+  get playing(): boolean {
+    return this.#activePlaybacks.size > 0;
   }
 
   async preload(): Promise<AudioBuffer | undefined> {
@@ -114,12 +136,29 @@ export class ClickTone extends EventTarget {
     return this.#muted;
   }
 
-  async play(src?: SoundInput): Promise<void> {
+  async play(input?: SoundInput | PlayOptions): Promise<void> {
+    await this.#play(this.#normalizePlayOptions(input));
+  }
+
+  stop(): void {
+    this.#stopActivePlaybacks(true);
+  }
+
+  async #play(
+    { src, loop = this.#loop, replay = this.#replay }: PlayOptions,
+    { skipThrottle = false }: { skipThrottle?: boolean } = {},
+  ): Promise<void> {
     if (this.#destroyed) return;
+
+    if (this.playing && replay === 'ignore-if-playing') return;
 
     const now = Date.now();
 
-    if (now - this.#lastPlay < this.#throttle) return;
+    if (!skipThrottle && replay !== 'restart' && now - this.#lastPlay < this.#throttle) return;
+
+    if (this.playing && (replay === 'interrupt' || replay === 'restart')) {
+      this.#stopActivePlaybacks(true);
+    }
 
     this.#lastPlay = now;
 
@@ -149,24 +188,28 @@ export class ClickTone extends EventTarget {
       const source = ctx.createBufferSource();
 
       source.buffer = buffer;
+      source.loop = loop;
 
       if (this.#pitch > 0) {
         source.playbackRate.value = Math.max(0.5, 1 + (Math.random() * 2 - 1) * this.#pitch);
       }
 
       source.connect(gain);
-      this.#emit('play');
+      const playback: ActivePlayback = { source, url, loop, stopped: false };
 
-      await new Promise<void>((resolve) => {
+      this.#activePlaybacks.add(playback);
+
+      const ended = new Promise<void>((resolve) => {
         source.onended = (): void => {
-          source.disconnect();
+          this.#finishPlayback(playback, !playback.stopped);
           resolve();
         };
-
-        source.start(0);
       });
 
-      this.#emit('end');
+      source.start(0);
+      this.#emit('play');
+
+      if (!loop) await ended;
     } catch (error) {
       this.#fail(error as Error);
     }
@@ -198,12 +241,72 @@ export class ClickTone extends EventTarget {
     if (this.#destroyed) return;
 
     this.#destroyed = true;
+    this.#stopActivePlaybacks(false);
     if (this.#visibilityHandler && typeof document !== 'undefined') {
       document.removeEventListener('visibilitychange', this.#visibilityHandler);
       this.#visibilityHandler = null;
     }
+    this.#recreateUnsubscribe?.();
+    this.#recreateUnsubscribe = null;
     this.#gain?.disconnect();
     this.#gain = null;
+  }
+
+  #normalizePlayOptions(input?: SoundInput | PlayOptions): PlayOptions {
+    if (this.#isPlayOptions(input)) return input;
+
+    return { src: input };
+  }
+
+  #isPlayOptions(input?: SoundInput | PlayOptions): input is PlayOptions {
+    return typeof input === 'object' && input !== null && ('loop' in input || 'replay' in input);
+  }
+
+  #stopActivePlaybacks(emitStop: boolean): void {
+    const playbacks = [...this.#activePlaybacks];
+
+    if (!playbacks.length) return;
+
+    playbacks.forEach((playback) => {
+      playback.stopped = true;
+
+      try {
+        playback.source.stop(0);
+      } catch {
+        /* already stopped */
+      }
+
+      this.#finishPlayback(playback, false);
+    });
+
+    if (emitStop) this.#emit('stop');
+  }
+
+  #finishPlayback(playback: ActivePlayback, emitEnd: boolean): void {
+    if (!this.#activePlaybacks.delete(playback)) return;
+
+    try {
+      playback.source.disconnect();
+    } catch {
+      /* already disconnected */
+    }
+
+    if (emitEnd) this.#emit('end');
+  }
+
+  #restartActiveLoops(): void {
+    if (this.#destroyed) return;
+
+    const loopUrls = [...this.#activePlaybacks]
+      .filter((playback) => playback.loop)
+      .map((playback) => playback.url);
+
+    if (!loopUrls.length) return;
+
+    this.#stopActivePlaybacks(false);
+    loopUrls.forEach((src) => {
+      void this.#play({ src, loop: true, replay: 'overlap' }, { skipThrottle: true });
+    });
   }
 
   #requireUrl(): string {

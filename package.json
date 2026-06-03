@@ -1,6 +1,6 @@
 {
   "name": "clicktone",
-  "version": "2.0.0",
+  "version": "2.1.0-dev.0",
   "description": "A lightweight helper for UI sound feedback. It wraps the Web Audio API with a tiny, event-based API and a rock-solid iOS/Safari unlock.",
   "author": "ux-ui.pro",
   "license": "MIT",

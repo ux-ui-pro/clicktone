@@ -2,12 +2,14 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 type FakeBufferSource = {
   buffer: AudioBuffer | null;
+  loop: boolean;
   playbackRate: { value: number };
   onended: (() => void) | null;
   connect: () => void;
   disconnect: () => void;
   start: () => void;
   stop: () => void;
+  stopped: boolean;
 };
 
 const installAudioMocks = (
@@ -15,6 +17,7 @@ const installAudioMocks = (
 ): {
   fetchSpy: ReturnType<typeof vi.fn>;
   instances: { closed: boolean }[];
+  sources: FakeBufferSource[];
 } => {
   const { advancingTime = false } = options;
   const fetchSpy = vi.fn(async () => ({
@@ -25,6 +28,7 @@ const installAudioMocks = (
   }));
 
   const instances: { closed: boolean }[] = [];
+  const sources: FakeBufferSource[] = [];
 
   const fakeAudioContextClass = class FakeAudioContext {
     state: AudioContextState = 'suspended';
@@ -76,15 +80,22 @@ const installAudioMocks = (
     createBufferSource(): AudioBufferSourceNode {
       const node: FakeBufferSource = {
         buffer: null,
+        loop: false,
         playbackRate: { value: 1 },
         onended: null,
         connect: () => {},
         disconnect: () => {},
         start: () => {
+          if (!node.loop) queueMicrotask(() => node.onended?.());
+        },
+        stop: () => {
+          node.stopped = true;
           queueMicrotask(() => node.onended?.());
         },
-        stop: () => {},
+        stopped: false,
       };
+
+      sources.push(node);
 
       return node as unknown as AudioBufferSourceNode;
     }
@@ -98,7 +109,7 @@ const installAudioMocks = (
   vi.stubGlobal('AudioContext', fakeAudioContextClass);
   vi.stubGlobal('webkitAudioContext', fakeAudioContextClass);
 
-  return { fetchSpy, instances };
+  return { fetchSpy, instances, sources };
 };
 
 describe('ClickTone', () => {
@@ -168,6 +179,57 @@ describe('ClickTone', () => {
 
     expect(fetchSpy).toHaveBeenCalledTimes(1);
     expect(fetchSpy).toHaveBeenCalledWith('/assets/a.wav');
+  });
+
+  it('keeps loop playback active until stopped', async () => {
+    const { sources } = installAudioMocks();
+    const { ClickTone } = await import('../../src/main');
+    const sound = new ClickTone({ src: '/assets/loop.wav', loop: true });
+
+    const stopHandler = vi.fn();
+    const endHandler = vi.fn();
+    sound.on('stop', stopHandler);
+    sound.on('end', endHandler);
+
+    await sound.play();
+
+    expect(sound.playing).toBe(true);
+    expect(sources.some((source) => source.loop)).toBe(true);
+
+    sound.stop();
+
+    expect(sound.playing).toBe(false);
+    expect(stopHandler).toHaveBeenCalledTimes(1);
+    expect(endHandler).not.toHaveBeenCalled();
+  });
+
+  it('can ignore play requests while already playing', async () => {
+    const { fetchSpy } = installAudioMocks();
+    const { ClickTone } = await import('../../src/main');
+    const sound = new ClickTone({ src: '/assets/loop.wav', loop: true });
+
+    await sound.play();
+    await sound.play({ src: '/assets/ignored.wav', replay: 'ignore-if-playing' });
+
+    expect(fetchSpy).toHaveBeenCalledTimes(1);
+    expect(fetchSpy).toHaveBeenCalledWith('/assets/loop.wav');
+  });
+
+  it('can interrupt active playback before starting another sound', async () => {
+    const { fetchSpy, sources } = installAudioMocks();
+    const { ClickTone } = await import('../../src/main');
+    const sound = new ClickTone({ src: '/assets/loop.wav', loop: true });
+
+    const stopHandler = vi.fn();
+    sound.on('stop', stopHandler);
+
+    await sound.play();
+    await sound.play({ src: '/assets/hit.wav', replay: 'interrupt' });
+
+    expect(fetchSpy).toHaveBeenCalledWith('/assets/loop.wav');
+    expect(fetchSpy).toHaveBeenCalledWith('/assets/hit.wav');
+    expect(sources.some((source) => source.loop && source.stopped)).toBe(true);
+    expect(stopHandler).toHaveBeenCalledTimes(1);
   });
 
   const withAppleUA = async (run: () => Promise<void>): Promise<void> => {

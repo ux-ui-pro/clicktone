@@ -3,6 +3,8 @@ export type {
   ClickToneEventDetail,
   ClickToneEventType,
   ClickToneOptions,
+  PlayOptions,
+  ReplayBehavior,
   SoundDescriptor,
   SoundInput,
   SoundSource,

@@ -6,7 +6,7 @@ A lightweight helper for UI sound feedback. It wraps the Web Audio API with a ti
 - Reliable autoplay unlock: eager gesture listeners, synchronous resume, silent priming ping, re-resume on `visibilitychange`.
 - Self-healing on iOS/Safari: detects a "zombie" context after tab/app switch or lock-screen and transparently rebuilds it on the next interaction.
 - Automatic format fallback via `canPlayType` (great for Safari, which dislikes OGG/Opus).
-- Shared decode cache, throttling, volume control, and subtle pitch variation.
+- Shared decode cache, throttling, volume control, loop playback, stop control, and subtle pitch variation.
 - Event-based (`EventTarget`) with a typed `on()` / `once()` API; `play()` also returns a `Promise`.
 - [Demo](https://codepen.io/ux-ui/pen/yLwbmMr)
 
@@ -83,6 +83,7 @@ onBeforeUnmount(() => {
 const off = sound.on('end', () => console.log('finished'));
 sound.on('error', (error) => console.error(error));
 sound.once('unlock', () => console.log('audio unlocked'));
+sound.on('stop', () => console.log('stopped'));
 
 off();
 
@@ -90,13 +91,14 @@ off();
 await sound.play();
 ```
 
-| Event    | Detail        | Fired when                                 |
-|:---------|:--------------|:-------------------------------------------|
-| `play`   | —             | A buffer source has started.               |
-| `end`    | —             | Playback finished.                         |
-| `unlock` | —             | The shared `AudioContext` became playable. |
-| `load`   | `AudioBuffer` | A source was fetched and decoded.          |
-| `error`  | `Error`       | Loading, decoding, or playback failed.     |
+| Event    | Detail        | Fired when                                  |
+|:---------|:--------------|:--------------------------------------------|
+| `play`   | —             | A buffer source has started.                |
+| `end`    | —             | Playback finished naturally.                |
+| `stop`   | —             | Active playback was stopped explicitly.     |
+| `unlock` | —             | The shared `AudioContext` became playable.  |
+| `load`   | `AudioBuffer` | A source was fetched and decoded.           |
+| `error`  | `Error`       | Loading, decoding, or playback failed.      |
 
 ## iOS / Safari unlock
 
@@ -127,14 +129,20 @@ document.addEventListener('pointerdown', () => ClickTone.unlock(), { once: true 
 | `throttle`       | `number`                                                                                    |   `0`   | Debounce interval in ms. Requests arriving sooner are ignored.               |
 | `pitchVariation` | `number`                                                                                    |   `0`   | `0`–`1`. Random playback-rate jitter so repeated clicks don't sound identical. |
 | `preload`        | `boolean`                                                                                   | `false` | Fetch and decode the buffer on construction.                                 |
+| `loop`           | `boolean`                                                                                   | `false` | Keep playback running until `stop()` is called.                              |
+| `replay`         | `'overlap' \| 'interrupt' \| 'ignore-if-playing' \| 'restart'`                              | `'overlap'` | Behavior when `play()` is called while this instance is already playing. |
 | `debug`          | `boolean`                                                                                   | `false` | Log internal errors to the console (in addition to the `error` event).       |
 
 ## Methods
 
 ```ts
 await sound.play();          // optionally play(src) to override the source
+await sound.play({ loop: true });
+await sound.play({ src: '/win.mp3', replay: 'interrupt' });
 await sound.preload();       // optionally preload(src)
 sound.unlock();
+sound.stop();
+sound.playing;               // whether this instance has active playback
 sound.setVolume(0.5);        // smoothly ramped
 sound.setMuted(true);
 sound.toggleMuted();
@@ -143,6 +151,50 @@ sound.destroy();
 
 ClickTone.unlock();          // static: unlock the shared context
 ClickTone.unlocked;          // static: whether the shared context is unlocked
+```
+
+### Replay behavior
+
+- `overlap` (default): preserve classic SFX behavior — every accepted `play()` call starts another buffer source.
+- `interrupt`: stop active playback, then start the requested sound.
+- `ignore-if-playing`: ignore the request while this instance is already playing.
+- `restart`: stop active playback and start again, bypassing `throttle`.
+
+For looped playback, `play()` resolves after the loop starts rather than waiting forever for a natural end. Use `stop()` to end it.
+
+## Interruptible sounds / game patterns
+
+Use one `ClickTone` instance for a long-running process sound and separate instances for terminal SFX:
+
+```ts
+const flying = new ClickTone({
+  src: new URL('./assets/flying.mp3', import.meta.url).href,
+  loop: true,
+  preload: true,
+});
+
+const bonus = new ClickTone({
+  src: new URL('./assets/bonus.mp3', import.meta.url).href,
+  preload: true,
+});
+
+await flying.play(); // resolves once the loop starts
+
+// Later, when the player wins:
+flying.stop();
+await bonus.play();
+```
+
+You can also encode the interruption policy on a single instance:
+
+```ts
+const terminal = new ClickTone({
+  src: new URL('./assets/explosion.mp3', import.meta.url).href,
+  replay: 'interrupt',
+  preload: true,
+});
+
+await terminal.play();
 ```
 
 ## License

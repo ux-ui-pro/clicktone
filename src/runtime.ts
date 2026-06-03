@@ -13,9 +13,7 @@ export const isAppleWebAudioFlaky = (): boolean => {
   if (!hasDOM) return false;
 
   const ua = navigator.userAgent;
-  const iOS =
-    /iP(hone|ad|od)/.test(ua) ||
-    (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  const iOS = /iP(hone|ad|od)/.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1);
   const safari = /^((?!chrome|android|crios|fxios|edg).)*safari/i.test(ua);
 
   return iOS || safari;

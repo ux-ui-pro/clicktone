@@ -16,6 +16,7 @@ export class SharedAudioEngine {
   #probing = false;
   #decodeCache = new Map<string, Promise<AudioBuffer>>();
   #onUnlock = new Set<() => void>();
+  #onRecreate = new Set<() => void>();
 
   get unlocked(): boolean {
     return this.#unlocked;
@@ -195,6 +196,11 @@ export class SharedAudioEngine {
 
     if (!ctx) return;
 
+    const listeners = [...this.#onRecreate];
+    listeners.forEach((listener) => {
+      listener();
+    });
+
     void ctx
       .resume()
       .then(() => this.#playSilentPing())
@@ -209,6 +215,12 @@ export class SharedAudioEngine {
     }
 
     this.#onUnlock.add(listener);
+  }
+
+  onRecreate(listener: () => void): () => void {
+    this.#onRecreate.add(listener);
+
+    return () => this.#onRecreate.delete(listener);
   }
 
   decode(url: string): Promise<AudioBuffer> {

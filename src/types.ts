@@ -19,6 +19,14 @@ export type SoundSource =
 
 export type SoundInput = SoundSource | SoundSource[];
 
+export type ReplayBehavior = 'overlap' | 'interrupt' | 'ignore-if-playing' | 'restart';
+
+export interface PlayOptions {
+  src?: SoundInput;
+  loop?: boolean;
+  replay?: ReplayBehavior;
+}
+
 export interface ClickToneOptions {
   src: SoundInput;
   volume?: number;
@@ -26,12 +34,15 @@ export interface ClickToneOptions {
   throttle?: number;
   pitchVariation?: number;
   preload?: boolean;
+  loop?: boolean;
+  replay?: ReplayBehavior;
   debug?: boolean;
 }
 
 export interface ClickToneEventDetail {
   play: undefined;
   end: undefined;
+  stop: undefined;
   unlock: undefined;
   load: AudioBuffer;
   error: Error;
