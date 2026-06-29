@@ -13,7 +13,7 @@ A lightweight helper for UI sound feedback. It wraps the Web Audio API with a ti
 ## Install
 
 ```bash
-yarn add clicktone
+npm install clicktone
 ```
 
 ## Usage (TypeScript)

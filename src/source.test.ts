@@ -2,13 +2,13 @@ import { describe, expect, it, vi } from 'vitest';
 
 describe('resolveBestSource', () => {
   it('returns a plain string source as-is', async () => {
-    const { resolveBestSource } = await import('../../src/source');
+    const { resolveBestSource } = await import('./source');
 
     expect(resolveBestSource('https://cdn.test/click.mp3')).toBe('https://cdn.test/click.mp3');
   });
 
   it('resolves URL instances to href', async () => {
-    const { resolveBestSource } = await import('../../src/source');
+    const { resolveBestSource } = await import('./source');
 
     expect(resolveBestSource(new URL('https://cdn.test/click.mp3'))).toBe(
       'https://cdn.test/click.mp3',
@@ -16,13 +16,13 @@ describe('resolveBestSource', () => {
   });
 
   it('throws for empty descriptor source', async () => {
-    const { resolveBestSource } = await import('../../src/source');
+    const { resolveBestSource } = await import('./source');
 
     expect(() => resolveBestSource({ src: '' })).toThrow('Source descriptor has an empty "src".');
   });
 
   it('throws when id points to a missing element', async () => {
-    const { resolveBestSource } = await import('../../src/source');
+    const { resolveBestSource } = await import('./source');
 
     expect(() => resolveBestSource({ id: 'missing-audio-node' })).toThrow(
       'No element found with id "missing-audio-node".',
@@ -43,7 +43,7 @@ describe('resolveBestSource', () => {
         return realCreateElement(tagName);
       });
 
-    const { resolveBestSource } = await import('../../src/source');
+    const { resolveBestSource } = await import('./source');
 
     const result = resolveBestSource([
       { src: '/assets/click.ogg', type: 'audio/ogg' },
