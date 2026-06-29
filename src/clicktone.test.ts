@@ -124,7 +124,7 @@ describe('ClickTone', () => {
 
   it('emits play and end events on successful playback', async () => {
     installAudioMocks();
-    const { ClickTone } = await import('../../src/main');
+    const { ClickTone } = await import('./main');
     const sound = new ClickTone({ src: '/assets/click.wav' });
 
     const playHandler = vi.fn();
@@ -140,7 +140,7 @@ describe('ClickTone', () => {
 
   it('emits load event on preload', async () => {
     installAudioMocks();
-    const { ClickTone } = await import('../../src/main');
+    const { ClickTone } = await import('./main');
     const sound = new ClickTone({ src: '/assets/click.wav' });
 
     const loadHandler = vi.fn();
@@ -153,7 +153,7 @@ describe('ClickTone', () => {
 
   it('emits error when source is invalid', async () => {
     installAudioMocks();
-    const { ClickTone } = await import('../../src/main');
+    const { ClickTone } = await import('./main');
     const sound = new ClickTone({ src: { src: '' } });
 
     const errorHandler = vi.fn();
@@ -171,7 +171,7 @@ describe('ClickTone', () => {
     const nowSpy = vi.spyOn(Date, 'now');
     nowSpy.mockReturnValue(1000).mockReturnValue(1000);
 
-    const { ClickTone } = await import('../../src/main');
+    const { ClickTone } = await import('./main');
     const sound = new ClickTone({ src: '/assets/click.wav', throttle: 500 });
 
     await sound.play('/assets/a.wav');
@@ -183,7 +183,7 @@ describe('ClickTone', () => {
 
   it('keeps loop playback active until stopped', async () => {
     const { sources } = installAudioMocks();
-    const { ClickTone } = await import('../../src/main');
+    const { ClickTone } = await import('./main');
     const sound = new ClickTone({ src: '/assets/loop.wav', loop: true });
 
     const stopHandler = vi.fn();
@@ -205,7 +205,7 @@ describe('ClickTone', () => {
 
   it('can ignore play requests while already playing', async () => {
     const { fetchSpy } = installAudioMocks();
-    const { ClickTone } = await import('../../src/main');
+    const { ClickTone } = await import('./main');
     const sound = new ClickTone({ src: '/assets/loop.wav', loop: true });
 
     await sound.play();
@@ -217,7 +217,7 @@ describe('ClickTone', () => {
 
   it('can interrupt active playback before starting another sound', async () => {
     const { fetchSpy, sources } = installAudioMocks();
-    const { ClickTone } = await import('../../src/main');
+    const { ClickTone } = await import('./main');
     const sound = new ClickTone({ src: '/assets/loop.wav', loop: true });
 
     const stopHandler = vi.fn();
@@ -255,7 +255,7 @@ describe('ClickTone', () => {
   it('hard-recreates a zombie AudioContext after a lifecycle return on Apple WebKit', async () => {
     await withAppleUA(async () => {
       const { fetchSpy, instances } = installAudioMocks({ advancingTime: false });
-      const { ClickTone } = await import('../../src/main');
+      const { ClickTone } = await import('./main');
       const sound = new ClickTone({ src: '/assets/click.wav' });
 
       await sound.play();
@@ -280,7 +280,7 @@ describe('ClickTone', () => {
   it('keeps a healthy AudioContext after a lifecycle return on Apple WebKit', async () => {
     await withAppleUA(async () => {
       const { fetchSpy, instances } = installAudioMocks({ advancingTime: true });
-      const { ClickTone } = await import('../../src/main');
+      const { ClickTone } = await import('./main');
       const sound = new ClickTone({ src: '/assets/click.wav' });
 
       await sound.play();
